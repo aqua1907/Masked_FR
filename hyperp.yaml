@@ -1,0 +1,14 @@
+epochs: 300 # Number of epochs
+batch_size: 128  # Batch size
+train_dir: data/CASIA-WebFace  # Path to the training data
+log_dir: runs # Store training results in this folder
+lr0: 0.001  # initial learning rate (SGD=1E-2, Adam=1E-3)
+lrf: 0.2  # final OneCycleLR learning rate (lr0 * lrf)
+momentum: 0.9  # SGD momentum/Adam beta1
+weight_decay: 0.0005  # optimizer weight decay 5e-4
+warmup_epochs: 0.0  # warmup epochs (fractions ok)
+warmup_momentum: 0.8  # warmup initial momentum
+warmup_bias_lr: 0.1  # warmup initial bias lr
+adam: False  # Select Adam optimizer torch.optim.Adam
+linear_lr: False  # Linear LR schedule
+resume: ''
