@@ -5,6 +5,7 @@ import cv2
 from PIL import Image
 
 from torch.utils.data import Dataset, DataLoader
+from tqdm import tqdm
 from torchvision.utils import make_grid
 from torchvision.transforms.functional import resize
 from sklearn.model_selection import train_test_split
@@ -46,6 +47,7 @@ class CasiaWebFaceDataset(Dataset):
 
         image = self.to_tensor(image)
         image = resize(image, [128, 128])
+        image = image.expand(3, -1, -1)
 
         return image, class_id, masked
 
@@ -141,32 +143,38 @@ class MyLoader:
         to select randomly one of them on the next iteration of the dataloader
         :return: list of transformations
         """
-        transforms = T.RandomChoice([T.RandomHorizontalFlip(p=0.5),
-                                     T.RandomVerticalFlip(p=0.5),
+        transforms = T.RandomChoice([T.RandomHorizontalFlip(p=1),
+                                     T.RandomVerticalFlip(p=1),
                                      T.RandomPerspective(p=1),
                                      T.RandomRotation(15),
-                                     T.RandomAffine(15),
-                                     T.ColorJitter(brightness=(0.2, 1.5),
-                                                   contrast=(0.3, 1.5),
-                                                   saturation=(0.2, 1.5),
-                                                   hue=(-0.3, 0.3))
+                                     T.RandomAffine(15)
                                      ])
 
         return transforms
 
 
 if __name__ == "__main__":
-    myloader = MyLoader(r'data/CASIA-WebFace', batch_size=512, test_size=0.3, seed=1364)
+    myloader = MyLoader(r'data/CASIA-WebFace', batch_size=32, test_size=0.3, seed=1364)
     train_loader, val_loader = myloader.create_loaders()
-    print(max(set(myloader.id_labels)))
-    print(min(set(myloader.id_labels)))
     train_dataset, val_dataset = myloader.train_dataset, myloader.val_dataset
-    batch = next(iter(train_loader))
-    print(batch)
+
+    # for i in tqdm(range(len(train_dataset))):
+    #     img, image_path, _, _ = train_dataset[i]
+    #     c, h, w = img.size()
+    #
+    #     if c < 3:
+    #         print(image_path)
+    # print()
+    # for i in tqdm(range(len(val_dataset))):
+    #     img, image_path, _, _ = val_dataset[i]
+    #     c, h, w = img.size()
+    #
+    #     if c < 3:
+    #         print(image_path)
     # train_loader, val_loader = myloader.create_loaders()
     #
-    # imgs, _, _ = next(iter(val_loader))
-    # print(imgs.shape)
-    # grid = make_grid(imgs).permute(1, 2, 0)
-    # plt.imshow(grid)
-    # plt.show()
+    imgs, _, _ = next(iter(train_loader))
+    print(imgs.shape)
+    grid = make_grid(imgs).permute(1, 2, 0)
+    plt.imshow(grid)
+    plt.show()
