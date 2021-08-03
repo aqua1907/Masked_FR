@@ -122,8 +122,6 @@ def train(device, hyp):
 
         del ckpt
 
-    train_batch = next(iter(train_loader))
-    val_batch = next(iter(val_loader))
     # Train
     for epoch in range(start_epoch, epochs):
         # Train
@@ -140,11 +138,10 @@ def train(device, hyp):
         avg_train_face_loss = 0.0
         avg_train_mask_loss = 0.0
 
-        # loop = tqdm(enumerate(train_loader), total=nb)
-        loop = tqdm(range(1))
+        loop = tqdm(enumerate(train_loader), total=nb)
         optimizer.zero_grad()
-        for i in loop:
-            images, face_targets, mask_targets = train_batch
+
+        for i, (images, face_targets, mask_targets) in loop:
             loop.set_description(f"Epoch [{epoch + 1}/{epochs}]")
             images, face_targets, mask_targets = images.to(device), face_targets.to(device), mask_targets.to(device)
 
@@ -207,7 +204,7 @@ def train(device, hyp):
         # Test
         model.eval()
         with torch.no_grad():
-            # loop = tqdm(enumerate(val_loader), total=len(val_loader))
+            loop = tqdm(enumerate(val_loader), total=len(val_loader))
 
             losses = []
             face_losses = []
@@ -221,10 +218,8 @@ def train(device, hyp):
             avg_val_face_loss = 0.0
             avg_val_mask_loss = 0.0
 
-            loop = tqdm(range(1))
-            for i in loop:
+            for i, (images, face_targets, mask_targets) in loop:
                 loop.set_description(f"Validation")
-                images, face_targets, mask_targets = val_batch
                 images, face_targets, mask_targets = images.to(device), face_targets.to(device), mask_targets.to(device)
 
                 # forward
