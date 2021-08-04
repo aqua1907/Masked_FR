@@ -159,7 +159,7 @@ class IResNet(nn.Module):
         x_cls = self.fc_cls(x)
         x_cls = self.cls(x_cls)
 
-        return F.normalize(x_feat, p=2.0, dim=1), x_cls
+        return x_feat, x_cls
 
 
 def _iresnet(arch, block, layers, pretrained, progress, **kwargs):

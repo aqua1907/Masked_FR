@@ -91,8 +91,7 @@ def train(device, hyp):
     print(f"num classes = {myloader.num_classes}")
     arc_face = ArcFaceLoss(512, myloader.num_classes, device)
     arc_face.to(device)
-    # if half:
-    #     arc_face.half()
+
     face_ce = torch.nn.CrossEntropyLoss()
     mask_ce = torch.nn.CrossEntropyLoss()
 
@@ -102,11 +101,11 @@ def train(device, hyp):
     start_epoch = 0
     last_opt_step = -1
     best_val_loss = np.inf
-    scheduler.last_epoch = start_epoch - 1
 
     if resume:
         ckpt = torch.load(resume)
         # Epochs
+        print(ckpt['epoch'])
         start_epoch = ckpt['epoch'] + 1
         assert start_epoch > 0, f'model training to {epochs} epochs is finished, nothing to resume.'
 
@@ -122,6 +121,7 @@ def train(device, hyp):
 
         del ckpt
 
+    scheduler.last_epoch = start_epoch - 1
     # Train
     for epoch in range(start_epoch, epochs):
         # Train
@@ -142,7 +142,7 @@ def train(device, hyp):
         optimizer.zero_grad()
 
         for i, (images, face_targets, mask_targets) in loop:
-            loop.set_description(f"Epoch [{epoch + 1}/{epochs}]")
+            loop.set_description(f"Epoch [{epoch}/{epochs}]")
             images, face_targets, mask_targets = images.to(device), face_targets.to(device), mask_targets.to(device)
 
             ni = i + nb * epoch  # number integrated batches (since train start)
