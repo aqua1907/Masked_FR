@@ -37,6 +37,7 @@ def train(device, hyp):
     else:
         ckpt_dir = os.path.split(resume)[0]
         run_dir = ckpt_dir.replace('weights', '')
+        ckpt_dir = Path(ckpt_dir)
     best = ckpt_dir / f"best.pt"
     writer = SummaryWriter(log_dir=run_dir)
 
