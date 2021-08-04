@@ -1,9 +1,9 @@
 epochs: 300 # Number of epochs
-batch_size: 8  # Batch size
+batch_size: 32  # Batch size
 train_dir: data/CASIA-WebFace  # Path to the training data
 log_dir: runs # Store training results in this folder
-lr0: 0.01  # initial learning rate (SGD=1E-2, Adam=1E-3)
-lrf: 0.15  # final OneCycleLR learning rate (lr0 * lrf)
+lr0: 0.0015  # initial learning rate (SGD=1E-2, Adam=1E-3)
+lrf: 0.2  # final OneCycleLR learning rate (lr0 * lrf)
 momentum: 0.9  # SGD momentum/Adam beta1
 weight_decay: 0.0005  # optimizer weight decay 5e-4
 warmup_epochs: 1.0  # warmup epochs (fractions ok)

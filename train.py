@@ -1,3 +1,5 @@
+import os
+
 from tqdm import tqdm
 from casia_dataset import MyLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -29,8 +31,12 @@ def train(device, hyp):
         hyp["train_dir"], hyp["log_dir"], hyp["batch_size"], hyp["epochs"], hyp['resume']
 
     # Summary writer
-    run_dir = Path(log_dir) / utils.create_run_folder(log_dir)
-    ckpt_dir = run_dir / "weights"
+    if not resume:
+        run_dir = Path(log_dir) / utils.create_run_folder(log_dir)
+        ckpt_dir = run_dir / "weights"
+    else:
+        ckpt_dir = os.path.split(resume)[0]
+        run_dir = ckpt_dir.replace('weights', '')
     best = ckpt_dir / f"best.pt"
     writer = SummaryWriter(log_dir=run_dir)
 
@@ -53,9 +59,6 @@ def train(device, hyp):
     logging.info(f"Number of trainable parameters = {trainable_params}")
 
     # Optimizer
-    nbs = 64  # nominal batch size
-    accumulate = max(round(nbs / batch_size), 1)  # accumulate loss before optimizing
-    hyp['weight_decay'] *= batch_size * accumulate / nbs  # scale weight_decay
     logger.info(f"Scaled weight_decay = {hyp['weight_decay']}")
 
     pg0, pg1, pg2 = [], [], []  # optimizer parameter groups
@@ -99,7 +102,6 @@ def train(device, hyp):
     nw = max(round(hyp['warmup_epochs'] * nb), 1000)  # number of warmup iterations, max(3 epochs, 1k iterations)
 
     start_epoch = 0
-    last_opt_step = -1
     best_val_loss = np.inf
 
     if resume:
@@ -139,7 +141,6 @@ def train(device, hyp):
         avg_train_mask_loss = 0.0
 
         loop = tqdm(enumerate(train_loader), total=nb)
-        optimizer.zero_grad()
 
         for i, (images, face_targets, mask_targets) in loop:
             loop.set_description(f"Epoch [{epoch}/{epochs}]")
@@ -149,7 +150,6 @@ def train(device, hyp):
             # Warmup
             if ni <= nw:
                 xi = [0, nw]  # x interp
-                accumulate = max(1, np.interp(ni, xi, [1, nbs / batch_size]).round())
                 for j, x in enumerate(optimizer.param_groups):
                     # bias lr falls from 0.1 to lr0, all other lrs rise from 0.0 to lr0
                     x['lr'] = np.interp(ni, xi, [hyp['warmup_bias_lr'] if j == 2 else 0.0, x['initial_lr'] * lf(epoch)])
@@ -164,6 +164,7 @@ def train(device, hyp):
                 mask_loss = mask_ce(mask_preds, mask_targets)
                 loss = face_loss + (mask_loss + 1.0)
 
+            optimizer.zero_grad(set_to_none=True)
             if not half:
                 loss.backward()
             else:
@@ -184,14 +185,11 @@ def train(device, hyp):
             avg_train_mask_acc = sum(mask_accs) / len(mask_accs)
 
             # Optimize
-            if ni - last_opt_step >= accumulate:
-                if not half:
-                    optimizer.step()
-                else:
-                    scaler.step(optimizer)  # optimizer.step
-                    scaler.update()
-                optimizer.zero_grad(set_to_none=True)
-                last_opt_step = ni
+            if not half:
+                optimizer.step()
+            else:
+                scaler.step(optimizer)  # optimizer.step
+                scaler.update()
 
             info = dict(train_loss=avg_train_loss,
                         train_face_loss=avg_train_face_loss,
