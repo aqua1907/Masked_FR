@@ -11,4 +11,4 @@ warmup_momentum: 0.8  # warmup initial momentum
 warmup_bias_lr: 0.1  # warmup initial bias lr
 adam: False  # Select Adam optimizer torch.optim.Adam
 linear_lr: False  # Linear LR schedule
-resume: 'best_10.pt'
+resume: ''
