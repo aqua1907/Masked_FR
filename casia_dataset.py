@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 class CasiaWebFaceDataset(Dataset):
     """Class representing the CASIA WebFace dataset
   """
+
     def __init__(self, images, labels, transform=None):
         """Init function
 
@@ -52,7 +53,6 @@ class CasiaWebFaceDataset(Dataset):
         return image, class_id, masked
 
     def __len__(self):
-
         return len(self.images)
 
 
@@ -143,12 +143,10 @@ class MyLoader:
         to select randomly one of them on the next iteration of the dataloader
         :return: list of transformations
         """
-        transforms = T.RandomChoice([T.RandomHorizontalFlip(p=1),
-                                     T.RandomVerticalFlip(p=1),
-                                     T.RandomPerspective(p=1),
-                                     T.RandomRotation(15),
-                                     T.RandomAffine(15)
-                                     ])
+        transforms = T.Compose([T.RandomHorizontalFlip(p=0.35),
+                                T.RandomVerticalFlip(p=0.35),
+                                T.RandomPerspective(p=0.35),
+                                ])
 
         return transforms
 
@@ -157,6 +155,7 @@ if __name__ == "__main__":
     myloader = MyLoader(r'data/CASIA-WebFace', batch_size=32, test_size=0.3, seed=1364)
     train_loader, val_loader = myloader.create_loaders()
     train_dataset, val_dataset = myloader.train_dataset, myloader.val_dataset
+    print(len(myloader.id_labels))
 
     # for i in tqdm(range(len(train_dataset))):
     #     img, image_path, _, _ = train_dataset[i]

@@ -37,10 +37,11 @@ class ArcFaceLoss(nn.Module):
         sine = torch.sqrt((1.0 - torch.pow(cosine, 2)).clamp(0, 1))
         phi = cosine * self.cos_m - sine * self.sin_m
 
+        other = (cosine - self.mm).float()
         if self.easy_margin:
             phi = torch.where(cosine > 0, phi, cosine)
         else:
-            phi = torch.where(cosine > self.th, phi, (cosine - self.mm).float())
+            phi = torch.where(cosine > self.th, phi, other)
         # --------------------------- convert label to one-hot ---------------------------
         # one_hot = torch.zeros(cosine.size(), requires_grad=True, device='cuda')
         one_hot = torch.zeros(cosine.size(), device=self.device)

@@ -172,7 +172,6 @@ def train(device, hyp):
             losses.append(loss.item())
             face_losses.append(face_loss.item())
             mask_losses.append(mask_loss.item())
-
             face_acc = utils.calculate_acc(logits, face_targets)
             mask_acc = utils.calculate_acc(mask_preds, mask_targets)
             face_accs.append(face_acc)
@@ -202,54 +201,54 @@ def train(device, hyp):
             loop.set_postfix(info)
 
         # Test
+        losses = []
+        face_losses = []
+        mask_losses = []
+        face_accs = []
+        mask_accs = []
+
+        avg_val_face_acc = 0.0
+        avg_val_mask_acc = 0.0
+        avg_val_loss = 0.0
+        avg_val_face_loss = 0.0
+        avg_val_mask_loss = 0.0
+
         model.eval()
-        with torch.no_grad():
-            loop = tqdm(enumerate(val_loader), total=len(val_loader))
+        loop = tqdm(enumerate(val_loader), total=len(val_loader))
 
-            losses = []
-            face_losses = []
-            mask_losses = []
-            face_accs = []
-            mask_accs = []
+        for i, (images, face_targets, mask_targets) in loop:
+            loop.set_description(f"Validation")
+            images, face_targets, mask_targets = images.to(device), face_targets.to(device), mask_targets.to(device)
 
-            avg_val_face_acc = 0.0
-            avg_val_mask_acc = 0.0
-            avg_val_loss = 0.0
-            avg_val_face_loss = 0.0
-            avg_val_mask_loss = 0.0
-
-            for i, (images, face_targets, mask_targets) in loop:
-                loop.set_description(f"Validation")
-                images, face_targets, mask_targets = images.to(device), face_targets.to(device), mask_targets.to(device)
-
-                # forward
+            # forward
+            with torch.no_grad():
                 features, mask_preds = model(images)
-                logits = arc_face(features, face_targets)
-                face_loss = face_ce(logits, face_targets)
-                mask_loss = mask_ce(mask_preds, mask_targets)
-                loss = face_loss + (mask_loss + 1.0)
+            logits = arc_face(features, face_targets)
+            face_loss = face_ce(logits, face_targets)
+            mask_loss = mask_ce(mask_preds, mask_targets)
+            loss = face_loss + (mask_loss + 1.0)
 
-                losses.append(loss.item())
-                face_losses.append(face_loss.item())
-                mask_losses.append(mask_loss.item())
+            losses.append(loss.item())
+            face_losses.append(face_loss.item())
+            mask_losses.append(mask_loss.item())
 
-                face_acc = utils.calculate_acc(logits, face_targets)
-                mask_acc = utils.calculate_acc(mask_preds, face_targets)
-                face_accs.append(face_acc)
-                mask_accs.append(mask_acc)
+            face_acc = utils.calculate_acc(logits, face_targets)
+            mask_acc = utils.calculate_acc(mask_preds, face_targets)
+            face_accs.append(face_acc)
+            mask_accs.append(mask_acc)
 
-                avg_val_loss = sum(losses) / len(losses)
-                avg_val_face_loss = sum(face_losses) / len(face_losses)
-                avg_val_mask_loss = sum(mask_losses) / len(mask_losses)
-                avg_val_face_acc = sum(face_accs) / len(face_accs)
-                avg_val_mask_acc = sum(mask_accs) / len(mask_accs)
+            avg_val_loss = sum(losses) / len(losses)
+            avg_val_face_loss = sum(face_losses) / len(face_losses)
+            avg_val_mask_loss = sum(mask_losses) / len(mask_losses)
+            avg_val_face_acc = sum(face_accs) / len(face_accs)
+            avg_val_mask_acc = sum(mask_accs) / len(mask_accs)
 
-                info = dict(val_loss=avg_val_loss,
-                            val_face_loss=avg_val_face_loss,
-                            val_mask_loss=avg_val_mask_loss,
-                            val_face_acc=avg_val_face_acc,
-                            val_mask_acc=avg_val_mask_acc)
-                loop.set_postfix(info)
+            info = dict(val_loss=avg_val_loss,
+                        val_face_loss=avg_val_face_loss,
+                        val_mask_loss=avg_val_mask_loss,
+                        val_face_acc=avg_val_face_acc,
+                        val_mask_acc=avg_val_mask_acc)
+            loop.set_postfix(info)
 
         # Scheduler
         lr = [x['lr'] for x in optimizer.param_groups]  # for tensorboard
