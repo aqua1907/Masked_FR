@@ -6,8 +6,6 @@ from torch.utils.tensorboard import SummaryWriter
 from torch import optim
 from pathlib import Path
 from torch.cuda.amp import GradScaler
-# from nets.mixnet import MixNet
-# from nets.arc_face_model import Backbone
 from nets import iresnet
 from loss.arc_face import ArcFaceLoss
 import utils
@@ -16,6 +14,7 @@ import torch.nn as nn
 import numpy as np
 import logging
 import yaml
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
@@ -27,8 +26,8 @@ def one_cycle(y1=0.0, y2=1.0, steps=100):
 
 
 def train(device, hyp):
-    train_dir, log_dir, batch_size, epochs, resume = \
-        hyp["train_dir"], hyp["log_dir"], hyp["batch_size"], hyp["epochs"], hyp['resume']
+    train_dir, log_dir, batch_size, epochs, resume, binary = \
+        hyp["train_dir"], hyp["log_dir"], hyp["batch_size"], hyp["epochs"], hyp['resume'], hyp['binary']
 
     # Summary writer
     if not resume:
@@ -39,17 +38,17 @@ def train(device, hyp):
         run_dir = ckpt_dir.replace('weights', '')
         ckpt_dir = Path(ckpt_dir)
     best = ckpt_dir / f"best.pt"
+    print(best)
     writer = SummaryWriter(log_dir=run_dir)
 
     myloader = MyLoader(train_dir, batch_size=batch_size, test_size=0.25, seed=123)
     train_loader, val_loader = myloader.create_loaders()
 
     half = True if device == 'cuda' else False
-    model = iresnet.iresnet34()
+    model = iresnet.iresnet34(binary=binary)
     model.to(device)
 
-    # if half:
-    #     model.half()
+    last_module = list(model.children())[-1]    # get last module
 
     model_params = sum(p.numel() for p in model.parameters())
     model_params = utils.human_format(model_params)
@@ -97,7 +96,10 @@ def train(device, hyp):
     arc_face.to(device)
 
     face_ce = torch.nn.CrossEntropyLoss()
-    mask_ce = torch.nn.CrossEntropyLoss()
+    if isinstance(last_module, torch.nn.Sigmoid):
+        mask_ce = torch.nn.BCELoss()
+    else:
+        mask_ce = torch.nn.BCEWithLogitsLoss()
 
     nb = len(train_loader)  # number of batches
     nw = max(round(hyp['warmup_epochs'] * nb), 1000)  # number of warmup iterations, max(3 epochs, 1k iterations)
@@ -157,6 +159,8 @@ def train(device, hyp):
                     if 'momentum' in x:
                         x['momentum'] = np.interp(ni, xi, [hyp['warmup_momentum'], hyp['momentum']])
 
+            if binary:
+                mask_targets = mask_targets.unsqueeze(1).float()
             # forward
             with torch.cuda.amp.autocast():
                 features, mask_preds = model(images)
@@ -174,8 +178,8 @@ def train(device, hyp):
             losses.append(loss.item())
             face_losses.append(face_loss.item())
             mask_losses.append(mask_loss.item())
-            face_acc = utils.calculate_acc(logits, face_targets)
-            mask_acc = utils.calculate_acc(mask_preds, mask_targets)
+            face_acc = utils.calculate_acc(logits, face_targets, False)
+            mask_acc = utils.calculate_acc(mask_preds, mask_targets, binary)
             face_accs.append(face_acc)
             mask_accs.append(mask_acc)
 
@@ -219,6 +223,8 @@ def train(device, hyp):
             loop.set_description(f"Validation")
             images, face_targets, mask_targets = images.to(device), face_targets.to(device), mask_targets.to(device)
 
+            if binary:
+                mask_targets = mask_targets.unsqueeze(1).float()
             # forward
             with torch.no_grad():
                 features, mask_preds = model(images)
@@ -231,8 +237,8 @@ def train(device, hyp):
             face_losses.append(face_loss.item())
             mask_losses.append(mask_loss.item())
 
-            face_acc = utils.calculate_acc(logits, face_targets)
-            mask_acc = utils.calculate_acc(mask_preds, face_targets)
+            face_acc = utils.calculate_acc(logits, face_targets, False)
+            mask_acc = utils.calculate_acc(mask_preds, face_targets, binary)
             face_accs.append(face_acc)
             mask_accs.append(mask_acc)
 

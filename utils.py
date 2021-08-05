@@ -61,14 +61,19 @@ def create_run_folder(path):
     return folder
 
 
-def calculate_acc(outputs, labels):
+def calculate_acc(outputs, labels, binary):
     """
     Calculate accuracy for one batch
     :param outputs: model predictions
     :param labels: ground truth labels
     :return: accuracy value from 0 to 1
     """
-    _, predicted = torch.max(outputs.data, 1)
-    correct = (predicted == labels).sum().item()
+    if binary:
+        outputs = torch.sigmoid(outputs)
+        y_prob = outputs > 0.5
+        return (labels == y_prob).sum().item() / labels.size(0)
+    else:
+        _, predicted = torch.max(outputs.data, 1)
+        correct = (predicted == labels).sum().item()
 
-    return correct / labels.size(0)
+        return correct / labels.size(0)

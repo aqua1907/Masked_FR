@@ -1,7 +1,8 @@
+from collections import OrderedDict
+
 import torch
 import torch.nn.functional as F
 from torch import nn
-
 
 __all__ = ['iresnet18', 'iresnet34', 'iresnet50', 'iresnet100', 'iresnet200']
 
@@ -29,6 +30,7 @@ def conv1x1(in_planes, out_planes, stride=1):
 
 class IBasicBlock(nn.Module):
     expansion = 1
+
     def __init__(self, inplanes, planes, stride=1, downsample=None,
                  groups=1, base_width=64, dilation=1):
         super(IBasicBlock, self).__init__()
@@ -36,12 +38,12 @@ class IBasicBlock(nn.Module):
             raise ValueError('BasicBlock only supports groups=1 and base_width=64')
         if dilation > 1:
             raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
-        self.bn1 = nn.BatchNorm2d(inplanes, eps=1e-05,)
+        self.bn1 = nn.BatchNorm2d(inplanes, eps=1e-05, )
         self.conv1 = conv3x3(inplanes, planes)
-        self.bn2 = nn.BatchNorm2d(planes, eps=1e-05,)
+        self.bn2 = nn.BatchNorm2d(planes, eps=1e-05, )
         self.prelu = nn.PReLU(planes)
         self.conv2 = conv3x3(planes, planes, stride)
-        self.bn3 = nn.BatchNorm2d(planes, eps=1e-05,)
+        self.bn3 = nn.BatchNorm2d(planes, eps=1e-05, )
         self.downsample = downsample
         self.stride = stride
 
@@ -61,9 +63,10 @@ class IBasicBlock(nn.Module):
 
 class IResNet(nn.Module):
     fc_scale = 8 * 8
+
     def __init__(self,
                  block, layers, dropout=0, num_features=512, zero_init_residual=False,
-                 groups=1, width_per_group=64, replace_stride_with_dilation=None):
+                 groups=1, width_per_group=64, replace_stride_with_dilation=None, binary=False):
         super(IResNet, self).__init__()
         self.inplanes = 64
         self.dilation = 1
@@ -93,17 +96,22 @@ class IResNet(nn.Module):
                                        layers[3],
                                        stride=2,
                                        dilate=replace_stride_with_dilation[2])
-        self.bn2 = nn.BatchNorm2d(512 * block.expansion, eps=1e-05,)
+        self.bn2 = nn.BatchNorm2d(512 * block.expansion, eps=1e-05, )
         self.dropout = nn.Dropout(p=dropout, inplace=True)
         self.fc_feat = nn.Linear(512 * block.expansion * self.fc_scale, num_features)
-        self.fc_cls = nn.Linear(512 * block.expansion * self.fc_scale, 2)
         self.features = nn.BatchNorm1d(num_features, eps=1e-05)
-        self.cls = nn.BatchNorm1d(2, eps=1e-05)
+        if binary:
+            self.cls = nn.Linear(512 * block.expansion * self.fc_scale, 1)
+        else:
+            self.cls = nn.Sequential(OrderedDict([
+                ('fc1', nn.Linear(512 * block.expansion * self.fc_scale, 2)),
+                ('bn1', nn.BatchNorm1d(2, eps=1e-05))]))
+
+            nn.init.constant_(self.cls.bn1.weight, 1.0)
+            self.cls.bn1.weight.requires_grad = False
 
         nn.init.constant_(self.features.weight, 1.0)
-        nn.init.constant_(self.cls.weight, 1.0)
         self.features.weight.requires_grad = False
-        self.cls.weight.requires_grad = False
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -154,10 +162,10 @@ class IResNet(nn.Module):
         x = self.bn2(x)
         x = torch.flatten(x, 1)
         x = self.dropout(x)
+
         x_feat = self.fc_feat(x)
         x_feat = self.features(x_feat)
-        x_cls = self.fc_cls(x)
-        x_cls = self.cls(x_cls)
+        x_cls = self.cls(x)
 
         return x_feat, x_cls
 
@@ -195,7 +203,7 @@ def iresnet200(pretrained=False, progress=True, **kwargs):
 
 
 if __name__ == '__main__':
-    model = iresnet50()
+    model = iresnet50(binary=False)
     x = torch.randn(16, 3, 128, 128)
 
     feat, cls = model(x)
