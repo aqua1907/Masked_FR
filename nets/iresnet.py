@@ -103,12 +103,11 @@ class IResNet(nn.Module):
         if binary:
             self.cls = nn.Linear(512 * block.expansion * self.fc_scale, 1)
         else:
-            self.cls = nn.Sequential(OrderedDict([
-                ('fc1', nn.Linear(512 * block.expansion * self.fc_scale, 2)),
-                ('bn1', nn.BatchNorm1d(2, eps=1e-05))]))
+            self.fc_cls = nn.Linear(512 * block.expansion * self.fc_scale, 2)
+            self.cls = nn.BatchNorm1d(2)
 
-            nn.init.constant_(self.cls.bn1.weight, 1.0)
-            self.cls.bn1.weight.requires_grad = False
+            nn.init.constant_(self.cls.weight, 1.0)
+            self.cls.weight.requires_grad = False
 
         nn.init.constant_(self.features.weight, 1.0)
         self.features.weight.requires_grad = False
@@ -165,7 +164,8 @@ class IResNet(nn.Module):
 
         x_feat = self.fc_feat(x)
         x_feat = self.features(x_feat)
-        x_cls = self.cls(x)
+        x_cls = self.fc_cls(x)
+        x_cls = self.cls(x_cls)
 
         return x_feat, x_cls
 

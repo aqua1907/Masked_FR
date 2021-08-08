@@ -111,7 +111,6 @@ def train(device, hyp):
         ckpt = torch.load(resume)
         # Epochs
         print(ckpt['epoch'])
-        start_epoch = ckpt['epoch'] + 1
         assert start_epoch > 0, f'model training to {epochs} epochs is finished, nothing to resume.'
 
         model.load_state_dict(ckpt['model'])
