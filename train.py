@@ -6,8 +6,6 @@ from torch.utils.tensorboard import SummaryWriter
 from torch import optim
 from pathlib import Path
 from torch.cuda.amp import GradScaler
-# from nets.mixnet import MixNet
-# from nets.arc_face_model import Backbone
 from nets import iresnet
 from loss.arc_face import ArcFaceLoss
 import utils
