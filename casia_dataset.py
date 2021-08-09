@@ -57,7 +57,7 @@ class CasiaWebFaceDataset(Dataset):
 
 
 class MyLoader:
-    def __init__(self, root_dir, start_index=0, batch_size=32, test_size=0.25):
+    def __init__(self, root_dir, start_index=0, batch_size=32, test_size=0.25, seed=123):
 
         self.data = []
         id_labels = []
@@ -80,6 +80,8 @@ class MyLoader:
 
         self.train_dataset = CasiaWebFaceDataset(x_train, y_train, self.get_transforms())
         self.val_dataset = CasiaWebFaceDataset(x_val, y_val)
+
+        self.seed= seed
 
     @staticmethod
     def map_labels(raw_labels, start_index=0):
