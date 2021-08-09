@@ -1,6 +1,9 @@
 import json
 import os
 import torch
+import torch.backends.cudnn as cudnn
+import random
+import random as np
 from datetime import datetime
 
 
@@ -72,3 +75,19 @@ def calculate_acc(outputs, labels):
     correct = (predicted == labels).sum().item()
 
     return correct / labels.size(0)
+
+
+def init_seeds(seed=0):
+    # Initialize random number generator (RNG) seeds
+    random.seed(seed)
+    np.random.seed(seed)
+    init_torch_seeds(seed)
+
+
+def init_torch_seeds(seed=0):
+    # Speed-reproducibility tradeoff https://pytorch.org/docs/stable/notes/randomness.html
+    torch.manual_seed(seed)
+    if seed == 0:  # slower, more reproducible
+        cudnn.benchmark, cudnn.deterministic = False, True
+    else:  # faster, less reproducible
+        cudnn.benchmark, cudnn.deterministic = True, False

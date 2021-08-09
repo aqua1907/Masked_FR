@@ -57,11 +57,10 @@ class CasiaWebFaceDataset(Dataset):
 
 
 class MyLoader:
-    def __init__(self, root_dir, start_index=0, batch_size=32, test_size=0.25, seed=199):
+    def __init__(self, root_dir, start_index=0, batch_size=32, test_size=0.25):
 
         self.data = []
         id_labels = []
-        self.seed = seed
 
         for root, dirs, files in os.walk(root_dir):
             for name in files:
