@@ -231,7 +231,7 @@ def train(device, hyp):
             mask_losses.append(mask_loss.item())
 
             face_acc = utils.calculate_acc(logits, face_targets)
-            mask_acc = utils.calculate_acc(mask_preds, face_targets)
+            mask_acc = utils.calculate_acc(mask_preds, mask_targets)
             face_accs.append(face_acc)
             mask_accs.append(mask_acc)
 
