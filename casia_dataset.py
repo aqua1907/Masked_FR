@@ -61,6 +61,7 @@ class MyLoader:
 
         self.data = []
         id_labels = []
+        self.seed = seed
 
         for root, dirs, files in os.walk(root_dir):
             for name in files:
@@ -81,7 +82,6 @@ class MyLoader:
         self.train_dataset = CasiaWebFaceDataset(x_train, y_train, self.get_transforms())
         self.val_dataset = CasiaWebFaceDataset(x_val, y_val)
 
-        self.seed= seed
 
     @staticmethod
     def map_labels(raw_labels, start_index=0):
