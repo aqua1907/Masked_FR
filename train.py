@@ -40,7 +40,7 @@ def train(device, hyp):
     writer = SummaryWriter(log_dir=run_dir)
 
     utils.init_seeds(123)
-    myloader = MyLoader(train_dir, batch_size=batch_size, test_size=0.25)
+    myloader = MyLoader(train_dir, batch_size=batch_size, test_size=0.25, seed=123)
     train_loader, val_loader = myloader.create_loaders()
 
     half = True if device == 'cuda' else False
