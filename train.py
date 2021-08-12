@@ -162,7 +162,7 @@ def train(device, hyp):
                 logits = arc_face(features, face_targets)
                 face_loss = face_ce(logits, face_targets)
                 mask_loss = mask_ce(mask_preds, mask_targets)
-                loss = face_loss + (torch.log(mask_loss) + 1.0)
+                loss = face_loss + torch.log(mask_loss + 1.0)
 
             optimizer.zero_grad(set_to_none=True)
             if not half:
@@ -224,7 +224,7 @@ def train(device, hyp):
             logits = arc_face(features, face_targets)
             face_loss = face_ce(logits, face_targets)
             mask_loss = mask_ce(mask_preds, mask_targets)
-            loss = face_loss + (torch.log(mask_loss) + 1.0)
+            loss = face_loss + torch.log(mask_loss + 1.0)
 
             losses.append(loss.item())
             face_losses.append(face_loss.item())
