@@ -1,7 +1,7 @@
 import os
 
 from tqdm import tqdm
-from casia_dataset import MyLoader
+from datasets.casia_dataset import MyLoader
 from torch.utils.tensorboard import SummaryWriter
 from torch import optim
 from pathlib import Path
@@ -17,6 +17,7 @@ import yaml
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
+SEED = 123
 
 
 def one_cycle(y1=0.0, y2=1.0, steps=100):
@@ -39,16 +40,17 @@ def train(device, hyp):
     best = ckpt_dir / f"best.pt"
     writer = SummaryWriter(log_dir=run_dir)
 
-    utils.init_seeds(123)
-    myloader = MyLoader(train_dir, batch_size=batch_size, test_size=0.25, seed=123)
+    utils.init_seeds(SEED)
+    myloader = MyLoader(train_dir, batch_size=batch_size, test_size=0.3, seed=SEED)
     train_loader, val_loader = myloader.create_loaders()
 
     half = True if device == 'cuda' else False
     model = iresnet.iresnet34()
     model.to(device)
 
-    # if half:
-    #     model.half()
+    print(f"num classes = {myloader.num_classes}")
+    arc_face = ArcFaceLoss(512, myloader.num_classes, device)
+    arc_face.to(device)
 
     model_params = sum(p.numel() for p in model.parameters())
     model_params = utils.human_format(model_params)
@@ -80,6 +82,7 @@ def train(device, hyp):
 
     optimizer.add_param_group({'params': pg1, 'weight_decay': hyp['weight_decay']})  # add pg1 with weight_decay
     optimizer.add_param_group({'params': pg2})  # add pg2 (biases)
+    optimizer.add_param_group({'params': arc_face.parameters()})
 
     logger.info('Optimizer groups: %g .bias, %g conv.weight, %g other' % (len(pg2), len(pg1), len(pg0)))
     del pg0, pg1, pg2
@@ -88,13 +91,9 @@ def train(device, hyp):
         lf = lambda x: (1 - x / (epochs - 1)) * (1.0 - hyp['lrf']) + hyp['lrf']  # linear
     else:
         lf = one_cycle(1, hyp['lrf'], epochs)  # cosine 1->hyp['lrf']
+
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
     scaler = GradScaler()
-
-    print(f"num classes = {myloader.num_classes}")
-    arc_face = ArcFaceLoss(512, myloader.num_classes, device)
-    arc_face.to(device)
-
     face_ce = torch.nn.CrossEntropyLoss()
     mask_ce = torch.nn.CrossEntropyLoss()
 
@@ -112,6 +111,7 @@ def train(device, hyp):
         assert start_epoch > 0, f'model training to {epochs} epochs is finished, nothing to resume.'
 
         model.load_state_dict(ckpt['model'])
+        arc_face.load_state_dict(ckpt['arc_face'])
 
         if ckpt['optimizer'] is not None:
             optimizer.load_state_dict(ckpt['optimizer'])
@@ -275,6 +275,7 @@ def train(device, hyp):
                         'best_val': best_val_loss,
                         'model': model.state_dict(),
                         'optimizer': optimizer.state_dict(),
+                        'arc_face': arc_face.state_dict()
                         }
                 torch.save(ckpt, best)
 
