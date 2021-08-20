@@ -193,9 +193,3 @@ def iresnet200(pretrained=False, progress=True, **kwargs):
                     progress, **kwargs)
 
 
-if __name__ == '__main__':
-    model = iresnet50()
-    x = torch.randn(16, 3, 128, 128)
-
-    feat, cls = model(x)
-    print(feat.shape, cls.shape)
