@@ -153,7 +153,7 @@ class MyLoader:
 
 
 if __name__ == "__main__":
-    myloader = MyLoader(r'data/CASIA-WebFace', batch_size=32, test_size=0.3, seed=1364)
+    myloader = MyLoader(r'../data/CASIA-WebFace', batch_size=32, test_size=0.3, seed=1364)
     train_loader, val_loader = myloader.create_loaders()
     train_dataset, val_dataset = myloader.train_dataset, myloader.val_dataset
     print(len(myloader.id_labels))
