@@ -11,6 +11,7 @@ from torchvision.transforms.functional import resize
 from sklearn.model_selection import train_test_split
 import torchvision.transforms as T
 import matplotlib.pyplot as plt
+from collections import Counter
 
 
 class CasiaWebFaceDataset(Dataset):
@@ -47,7 +48,7 @@ class CasiaWebFaceDataset(Dataset):
             image = self.transform(image)
 
         image = self.to_tensor(image)
-        image = resize(image, [128, 128])
+        image = resize(image, [112, 112])
         image = image.expand(3, -1, -1)
 
         return image, class_id, masked
@@ -153,10 +154,21 @@ class MyLoader:
 
 
 if __name__ == "__main__":
-    myloader = MyLoader(r'../data/CASIA-WebFace', batch_size=32, test_size=0.3, seed=1364)
-    train_loader, val_loader = myloader.create_loaders()
-    train_dataset, val_dataset = myloader.train_dataset, myloader.val_dataset
-    print(len(myloader.id_labels))
+    myloader = MyLoader(r'../data/CASIA-WebFace_masked', batch_size=32, test_size=0.3, seed=1364)
+    data = myloader.data
+
+    hs, ws = [], []
+    for image_path in tqdm(data, total=len(data)):
+        img = cv2.imread(image_path)
+        h, w, c = img.shape
+        hs.append(h)
+        ws.append(w)
+
+    print(min(ws))
+    print(min(hs))
+    print(max(ws))
+    print(max(hs))
+
 
     # for i in tqdm(range(len(train_dataset))):
     #     img, image_path, _, _ = train_dataset[i]

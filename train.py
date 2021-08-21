@@ -17,7 +17,7 @@ import yaml
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
-SEED = 123
+SEED = 769
 
 
 def one_cycle(y1=0.0, y2=1.0, steps=100):
